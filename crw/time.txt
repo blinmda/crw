@@ -1,0 +1,8 @@
+time: 0,008000 sec 
+time: 0,006000 sec 
+time: 0,006000 sec 
+time: 0,008000 sec 
+time: 0,008000 sec 
+time: 0,008000 sec 
+time: 0,009000 sec 
+time: 0,006000 sec 
