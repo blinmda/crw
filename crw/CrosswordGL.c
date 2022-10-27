@@ -1,5 +1,5 @@
 ﻿// CrosswordGUI.cpp : Определяет точку входа для приложения.
-//
+// попытка
 #define _CRT_SECURE_NO_WARNINGS
 #include "resource.h"
 #include "framework.h"
