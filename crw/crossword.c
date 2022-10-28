@@ -149,7 +149,7 @@ void putWord(const wchar_t* word, int x, int y, enum Orientation dir)
 
 
 // лучшей позицией считаем ту, которая дает больше пересечений с другими словами 
-int selectBestPosition(const wchar_t* word, int* x, int* y, enum Orientation* dir)
+int selectBestPosition(const wchar_t* word, int* x, int* y, enum Orientation* dir, int nb)
 {
 	int max_beauty = -1;
 	for (unsigned int i = 0; i < cw.height; i++)
@@ -191,7 +191,7 @@ int cmpPositions(struct Position* a, struct Position* b)
 	return a->beauty - b->beauty; // функция, сравнивающая две позиции для одного слова
 }
 
-int selectNotWorstPosition(const wchar_t* word, int* x, int* y, enum Orientation* dir)
+int selectNotWorstPosition(const wchar_t* word, int* x, int* y, enum Orientation* dir, int nb)
 {
 	// Не худшая позиция -- из всех выбираем не лучшую и не худшую
 	struct Position* positions = (struct Position*)calloc(cw.height * cw.width * 2, sizeof(struct Position));
@@ -220,35 +220,22 @@ int selectNotWorstPosition(const wchar_t* word, int* x, int* y, enum Orientation
 	return positions[l].beauty;
 }
 
-int selectRandPosition(const wchar_t* word, int* x, int* y, enum Orientation* dir)
+int selectRandPosition(const wchar_t* word, int* x, int* y, enum Orientation* dir, int ndBeauty)
 {
-	//500 раз пытаемся выбрать рандомную позицию для слова 
-	int cycles = 500;
-	while (cycles--)
-	{
-		int i = rand() % cw.height, j = rand() % cw.width;
-		int k = rand() % 2;
-		int beauty = wordPlaceBeauty(word, i, j, (enum Orientation)k);
-		if (beauty >= 0)
-		{
-			*x = i;
-			*y = j;
-			*dir = (enum Orientation)k;
-			return beauty;
-		}
-
-		k = (k + 1) % 2;
+	//Алгоритмическая оптимизация
+	int beauty = -1, counter = 0, size = cw.height * cw.width;
+	int i = 0, j = 0, k = 0;
+	while (beauty < ndBeauty) {
+		i = rand() % cw.height, j = rand() % cw.width;
+		k = rand() & 1;
 		beauty = wordPlaceBeauty(word, i, j, (enum Orientation)k);
-		if (beauty >= 0)
-		{
-
-			*x = i;
-			*y = j;
-			*dir = (enum Orientation)k;
-			return beauty;
-		}
+		counter++;
+		if (counter == size) break;
 	}
-	return -1;
+	*x = i;
+	*y = j;
+	*dir = (enum Orientation)k;
+	return beauty;
 }
 
 void fillCrossword(struct Dictionary dict, int density, HWND parent, HINSTANCE hInst)
@@ -269,7 +256,7 @@ void fillCrossword(struct Dictionary dict, int density, HWND parent, HINSTANCE h
 																		 // в этом массиве хранятся номера тех слов, которые установить не удалось
 	int skippedCnt = 0;
 
-	int (*selector)(const wchar_t*, int*, int*, enum Orientation*) = NULL; // функция, выбирающая место для какого-то слова
+	int (*selector)(const wchar_t*, int*, int*, enum Orientation*, int) = NULL; // функция, выбирающая место для какого-то слова
 	if (density == DENSITY_LOW) // если нам нужен кроссворд с низкой плотностью
 		selector = selectRandPosition; // слова будем ставить в рандомные места
 	else if (density == DENSITY_MEDIUM) // для средней плотности
@@ -278,6 +265,7 @@ void fillCrossword(struct Dictionary dict, int density, HWND parent, HINSTANCE h
 		selector = selectBestPosition; // выбираем лучшие места
 	else
 		exit(INVALID_PARAMETER_ERROR); // что-то пошло не так
+	int ndBeauty = 0;//переменная, хранящая минимальное количество пересечений
 
 	for (unsigned int i = 0; i < dict.size; i++) // для всех слов в словаре 
 	{
@@ -285,19 +273,22 @@ void fillCrossword(struct Dictionary dict, int density, HWND parent, HINSTANCE h
 		int x, y;
 		enum Orientation dir;
 
-		int beauty = selector(word, &x, &y, &dir); // выбираем позицию
+		if (density == DENSITY_LOW && (dict.size > 20 && i >= (dict.size >> 1))) ndBeauty = 1;
+		int beauty = selector(word, &x, &y, &dir, ndBeauty); // выбираем позицию
 
-		if (beauty == 0 && i != 0) // если хорошесть слова -- 0, то мы не смогли установить слово
-		{
-			skippedWords[skippedCnt++] = i;
-			continue;
+		if (density != DENSITY_LOW) {
+			if (beauty == 0 && i != 0) // если хорошесть слова -- 0, то мы не смогли установить слово
+			{
+				skippedWords[skippedCnt++] = i;
+				continue;
+			}
 		}
-
 		if (beauty < 0) continue;
 
 		progressBarNextStep(); // слово установилось, двигаем полосу загрузки
 		putWord(word, x, y, dir); // устанавливаем слово в кроссворд
 	}
+	ndBeauty = 0;
 
 	for (int i = 0; i < skippedCnt; i++) // а теперь перебираем все пропущенные слова и устанавливаем их 
 	{
@@ -305,8 +296,7 @@ void fillCrossword(struct Dictionary dict, int density, HWND parent, HINSTANCE h
 		int x, y;
 		enum Orientation dir;
 
-		selector = rand() % 100 > 95 ? selectNotWorstPosition : selector;
-		int beauty = selector(word, &x, &y, &dir);
+		int beauty = selector(word, &x, &y, &dir, ndBeauty);
 
 		if (beauty < 0) continue;
 
