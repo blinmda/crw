@@ -75,17 +75,15 @@ void initCrossword(parameters ps)
 int isValidPosition(unsigned int x, unsigned int y)
 {
 	// буквы слов не должны вылезать за границы кроссворда
-	int valid = 0;
-	if (y < cw.width && x < cw.height) valid = 1;
-	return valid;
+	// убираем лишний код
+	return y < cw.width && x < cw.height;
 }
 
 int isEmptyCell(int x, int y)
 {
 	// используем '*' и ' ' для обозначения пустых ячеек
-	int empty = 0;
-	if (cw.map[x][y] == ' ' || cw.map[x][y] == '*') empty = 1;
-	return empty;
+	// убираем лишний код
+	return cw.map[x][y] == ' ' || cw.map[x][y] == '*';
 }
 
 /*
@@ -117,8 +115,10 @@ int wordPlaceBeauty(const wchar_t* word, int x, int y, enum Orientation orientat
 		if ((isValidPosition(x - step_y, y - step_x)) && (!isEmptyCell(x - step_y, y - step_x) && *word != cw.map[x][y]))
 				return -1;
 
-		if (cw.map[x][y] == *word)
-			intersectionsNumber++;
+		if (cw.map[x][y] == *word) // ассемблерная вставка
+			_asm {
+			inc intersectionsNumber
+		}
 	}
 
 	if ((isValidPosition(x, y)) && (!isEmptyCell(x, y)))
@@ -150,9 +150,19 @@ int selectBestPosition(const wchar_t* word, int* x, int* y, enum Orientation* di
 	int max_beauty = -1;
 	// алгоритмическая оптимизация
 	int hht = cw.height, wth = cw.width;
-	if (nb == 1) {
-		hht >>= 1;
-		wth >>= 1;
+	if (nb == 1) { // ассемблерная вставка
+		_asm 
+		{
+			mov         eax, dword ptr[hht]
+			sar         eax, 1
+			mov         dword ptr[hht], eax
+		}
+		_asm
+		{
+			mov         eax, dword ptr[wth]
+			sar         eax, 1
+			mov         dword ptr[wth], eax
+		}
 	}
 	for (unsigned int i = 0; i < hht; i++)
 		for (unsigned int j = 0; j < wth; j++)
@@ -250,9 +260,8 @@ void fillCrossword(struct Dictionary dict, int density, HWND parent, HINSTANCE h
 {
 	initProgressBar(dict.size, parent, hInst); // инициализируем полосу загрузки для долгих операций
 
-	for (unsigned int i = 0; i < dict.size; i++) // перемешиваем слова в кроссворде
-										// нужно для того, чтобы при каждой новой генерации с одним набором слов
-										// получался разный результат
+	for (unsigned int i = 0; i < (dict.size >> 1); i++) // перемешиваем слова в кроссворде
+										// уменьшили цикл
 	{
 		int first = rand() % dict.size, second = rand() % dict.size;
 		wchar_t* tmp = dict.words[first]; // просто меняем местами случайные слова
