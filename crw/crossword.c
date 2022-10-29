@@ -102,8 +102,7 @@ int wordPlaceBeauty(const wchar_t* word, int x, int y, enum Orientation orientat
 	if (orientation == horizontal) step_x = 1;
 	else step_y = 1;
 
-	if (isValidPosition(x - step_x, y - step_y))
-		if (!isEmptyCell(x - step_x, y - step_y))
+	if ((isValidPosition(x - step_x, y - step_y)) && (!isEmptyCell(x - step_x, y - step_y)))
 			return -1;
 
 	for (; *word != '\0'; x += step_x, y += step_y, word++)
@@ -112,20 +111,17 @@ int wordPlaceBeauty(const wchar_t* word, int x, int y, enum Orientation orientat
 			return -1;
 		if (!(cw.map[x][y] == ' ' || *word == cw.map[x][y]))
 			return -1;
-		if (isValidPosition(x + step_y, y + step_x))
-			if (!isEmptyCell(x + step_y, y + step_x) && *word != cw.map[x][y])
+		if ((isValidPosition(x + step_y, y + step_x)) && (!isEmptyCell(x + step_y, y + step_x) && *word != cw.map[x][y]))
 				return -1;
 
-		if (isValidPosition(x - step_y, y - step_x))
-			if (!isEmptyCell(x - step_y, y - step_x) && *word != cw.map[x][y])
+		if ((isValidPosition(x - step_y, y - step_x)) && (!isEmptyCell(x - step_y, y - step_x) && *word != cw.map[x][y]))
 				return -1;
 
 		if (cw.map[x][y] == *word)
 			intersectionsNumber++;
 	}
 
-	if (isValidPosition(x, y))
-		if (!isEmptyCell(x, y))
+	if ((isValidPosition(x, y)) && (!isEmptyCell(x, y)))
 			return -1;
 	return intersectionsNumber;
 }
@@ -152,10 +148,16 @@ void putWord(const wchar_t* word, int x, int y, enum Orientation dir)
 int selectBestPosition(const wchar_t* word, int* x, int* y, enum Orientation* dir, int nb)
 {
 	int max_beauty = -1;
-	for (unsigned int i = 0; i < cw.height; i++)
-		for (unsigned int j = 0; j < cw.width; j++)
+	// алгоритмическая оптимизация
+	int hht = cw.height, wth = cw.width;
+	if (nb == 1) {
+		hht >>= 1;
+		wth >>= 1;
+	}
+	for (unsigned int i = 0; i < hht; i++)
+		for (unsigned int j = 0; j < wth; j++)
 		{
-			int k = rand() % 2;
+			int k = rand() & 1; // снижение мощности
 			int beauty = wordPlaceBeauty(word, i, j, (enum Orientation)k);
 			if (beauty > max_beauty)
 			{
@@ -165,7 +167,7 @@ int selectBestPosition(const wchar_t* word, int* x, int* y, enum Orientation* di
 				*dir = (enum Orientation)k;
 			}
 
-			k = (k + 1) % 2;//меняем ориентацию
+			k = (k + 1) & 1; // снижение мощности
 			beauty = wordPlaceBeauty(word, i, j, (enum Orientation)k);
 			if (beauty > max_beauty)
 			{
@@ -197,8 +199,14 @@ int selectNotWorstPosition(const wchar_t* word, int* x, int* y, enum Orientation
 	struct Position* positions = (struct Position*)calloc(cw.height * cw.width * 2, sizeof(struct Position));
 	if (positions == NULL) exit(MEMORY_ALLOCATION_ERROR);
 	int idx = 0;
-	for (unsigned int i = 0; i < cw.height; i++)
-		for (unsigned int j = 0; j < cw.width; j++)
+	// алгоритмическая оптимизация
+	int hht = cw.height, wth = cw.width;
+	if (nb == 1) {
+		hht >>= 1;
+		wth >>= 1;
+	}
+	for (unsigned int i = 0; i < hht; i++)
+		for (unsigned int j = 0; j < wth; j++)
 			for (int k = 0; k < 2; k++)
 			{
 				positions[idx].beauty = wordPlaceBeauty(word, i, j, (enum Orientation)k);
@@ -212,7 +220,7 @@ int selectNotWorstPosition(const wchar_t* word, int* x, int* y, enum Orientation
 	int r = idx;
 
 	while (l < idx - 1 && positions[l].beauty != 1) l++;
-	l = l + (r - l)/2;
+	l += (r - l) >> 1; // снижение мощности
 
 	*x = positions[l].x;
 	*y = positions[l].y;
@@ -273,10 +281,10 @@ void fillCrossword(struct Dictionary dict, int density, HWND parent, HINSTANCE h
 		int x, y;
 		enum Orientation dir;
 
-		if (density == DENSITY_LOW && (dict.size > 20 && i >= (dict.size >> 1))) ndBeauty = 1;
+		if (((density == DENSITY_LOW) && (dict.size > 20 && i >= (dict.size >> 1))) || ((density == DENSITY_HIGH || density == DENSITY_MEDIUM) && (i< (dict.size >> 2)))) ndBeauty = 1;
 		int beauty = selector(word, &x, &y, &dir, ndBeauty); // выбираем позицию
 
-		if (density != DENSITY_LOW) {
+		if (density != DENSITY_LOW || ndBeauty !=0) {
 			if (beauty == 0 && i != 0) // если хорошесть слова -- 0, то мы не смогли установить слово
 			{
 				skippedWords[skippedCnt++] = i;
@@ -292,6 +300,7 @@ void fillCrossword(struct Dictionary dict, int density, HWND parent, HINSTANCE h
 
 	for (int i = 0; i < skippedCnt; i++) // а теперь перебираем все пропущенные слова и устанавливаем их 
 	{
+		ndBeauty = 0;
 		wchar_t* word = dict.words[skippedWords[i]];
 		int x, y;
 		enum Orientation dir;
