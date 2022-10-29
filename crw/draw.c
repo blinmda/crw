@@ -99,16 +99,18 @@ void draw(HDC hdc, parameters params, int width, int height)
 
     float widthMargin = (2.0f - params.width * cellSize) / 2 - 1.0f;
     float heightMargin = (y_size * 2 - params.height * cellSize) / 2 - y_size;
-
+    float wth = 0, hht = 0; // снижение мощности
     for (int i = 0; i <= params.width; i++)
     {
-        glVertex2f(widthMargin + cellSize * i, heightMargin);
-        glVertex2f(widthMargin + cellSize * i, -heightMargin);
+        glVertex2f(widthMargin + wth, heightMargin);
+        glVertex2f(widthMargin + wth, -heightMargin);
+        wth += cellsize;
     }
     for (int i = 0; i <= params.height; i++)
     {
-        glVertex2f(widthMargin, heightMargin + cellSize * i);
-        glVertex2f(-widthMargin, heightMargin + cellSize * i);
+        glVertex2f(widthMargin, heightMargin + hht);
+        glVertex2f(-widthMargin, heightMargin + hht);
+        hht += cellsize;
     }
 
     glEnd();
