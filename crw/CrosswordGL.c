@@ -170,14 +170,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                 double time_spent = 0;
                 clock_t begin = clock();
                 initCrossword(mainParams);
-                int cntSelected = 0;
-                for (unsigned int i = 0; i < ru_dict.size; i++)
-                    if (ru_dict.selected[i]) cntSelected++;
 
-                struct Dictionary dict = {cntSelected, (wchar_t**)calloc(cntSelected, sizeof(wchar_t*)), NULL};
+                //избавление от лишнего цикла
+                struct Dictionary dict = {maxWordsCount, (wchar_t**)calloc(maxWordsCount, sizeof(wchar_t*)), NULL};
+                
+                //машинно-зависимая оптимизация
+                wchar_t** dwrd = dict.words;
+                wchar_t** dslctd = ru_dict.words;
                 for (unsigned int i = 0, j = 0; i < ru_dict.size; i++)
-                    if (ru_dict.selected[i])
-                        dict.words[j++] = ru_dict.words[i];
+                    if (ru_dict.selected[i]) {
+                        *(dwrd + j) = *(dslctd + i);
+                        j++;
+                    }
 
                 fillCrossword(dict, mainParams.density, hWnd, hInst);
                 SendMessage(hWnd, WM_PRINT, 0, 0);
@@ -319,15 +323,15 @@ INT_PTR CALLBACK Dictionary(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
         for (unsigned int i = 0; i < ru_dict.size; i++) // заполняем список всеми словами из словаря
         {
             SendMessageW(hListBox, LB_ADDSTRING, 0, (LPARAM)ru_dict.words[i]);
+            //оптимизация вложения циклов
+            if (ru_dict.selected[i] == 1)
+                SendMessage(hListBox, LB_SETSEL, TRUE, i);
         }
         wchar_t buff[10];
         _itow(maxWordsCount, buff, 10);
         SetDlgItemTextW(hDlg, EDIT_WORDSCNT, buff); // устанавливаем в поле "количество слов"
                                                                     // текущее значение параметра
-        for (unsigned int i = 0; i < ru_dict.size; i++)
-            if (ru_dict.selected[i] == 1)        // слова, которые были выбраны в прошлый раз,
-                                                    // помечаем выбранными 
-                SendMessage(hListBox, LB_SETSEL, TRUE, i);
+        
         return (INT_PTR)TRUE;
     }
     case WM_COMMAND:
@@ -374,13 +378,8 @@ INT_PTR CALLBACK Dictionary(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
                 return (INT_PTR)TRUE;
             case RANDCHOICE:
                 
-
-                if (inputWordsCnt > min(ru_dict.size, 477))
-                {
-                    DialogBox(hInst, MAKEINTRESOURCE(IDD_DICTPROBLEMS), hDlg, Default);
-
-                }
-                else
+                //избавление от лишних переходов
+                if (inputWordsCnt <= ru_dict.size)
                 {
                     maxWordsCount = inputWordsCnt;
                     SendMessage(hListBox, LB_SETSEL, FALSE, -1);
@@ -390,9 +389,13 @@ INT_PTR CALLBACK Dictionary(HWND hDlg, UINT message, WPARAM wParam, LPARAM lPara
                         do {
                             index = rand() % ru_dict.size;
                         } while (SendMessage(hListBox, LB_GETSEL, index, 0));
-                        
+
                         SendMessage(hListBox, LB_SETSEL, TRUE, index);
                     }
+                }
+                else
+                {
+                    DialogBox(hInst, MAKEINTRESOURCE(IDD_DICTPROBLEMS), hDlg, Default);
                 }
             }
         }
