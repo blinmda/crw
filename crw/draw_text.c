@@ -35,10 +35,11 @@ void drawChar(char c, float fontSize, float x, float y)
 	int x_offset = c & 0b1111, y_offset = c >> 4;
 
 	//вычисление координат буквы на шрифте
+	//снижение мощности
 	rectTex[0] = rectTex[6] = x_offset * charSize;
-	rectTex[2] = rectTex[4] = (x_offset + 1) * charSize;
-	rectTex[1] = rectTex[3] = (y_offset + 1) * charSize;
+	rectTex[2] = rectTex[4] = rectTex[0] + charSize;
 	rectTex[5] = rectTex[7] = y_offset * charSize;
+	rectTex[1] = rectTex[3] = rectTex[5] + charSize;
 
 	glEnable(GL_TEXTURE_2D);
 	glEnable(GL_BLEND);

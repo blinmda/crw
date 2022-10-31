@@ -1,7 +1,2 @@
-time: 0,014000 sec 
-time: 0,013000 sec 
-time: 0,012000 sec 
-time: 0,125000 sec 
-time: 0,150000 sec 
-time: 0,140000 sec 
-time: 1,390000 sec 
+time: 0,518000 sec 
+time: 0,515000 sec 

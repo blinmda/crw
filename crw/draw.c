@@ -99,18 +99,19 @@ void draw(HDC hdc, parameters params, int width, int height)
 
     float widthMargin = (2.0f - params.width * cellSize) / 2 - 1.0f;
     float heightMargin = (y_size * 2 - params.height * cellSize) / 2 - y_size;
+
     float wth = 0, hht = 0; // снижение мощности
     for (int i = 0; i <= params.width; i++)
     {
         glVertex2f(widthMargin + wth, heightMargin);
         glVertex2f(widthMargin + wth, -heightMargin);
-        wth += cellsize;
+        wth += cellSize;
     }
     for (int i = 0; i <= params.height; i++)
     {
         glVertex2f(widthMargin, heightMargin + hht);
         glVertex2f(-widthMargin, heightMargin + hht);
-        hht += cellsize;
+        hht += cellSize;
     }
 
     glEnd();
@@ -121,7 +122,11 @@ void draw(HDC hdc, parameters params, int width, int height)
     struct Crossword cw = getCrossword();
     float cornerX = widthMargin + (cellSize - fontSize) / 2;
     float cornerY = heightMargin + cw.height * cellSize -fontSize- (cellSize - fontSize) / 2;
-    for (int i = 0; i < params.height; i++)
+
+    //снижение мощности
+    float x = 0, y = 0;
+    for (int i = 0; i < params.height; i++) {
+        y = 0;
         for (int j = 0; j < params.width; j++)
         {
             char mb[4]; wctomb(mb, cw.map[i][j]);
@@ -135,13 +140,15 @@ void draw(HDC hdc, parameters params, int width, int height)
                 glColor3f(1.f, 1.f, 1.f);
 
             drawChar(
-                     mb[0],
-                     fontSize, 
-                     cornerX + j * cellSize,
-                     cornerY - i * cellSize
-                );
+                mb[0],
+                fontSize,
+                cornerX + y,
+                cornerY - x
+            );
+            y += cellSize;
         }
-
+        x += cellSize;
+    }
     SwapBuffers(hdc);
 }
 
