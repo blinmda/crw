@@ -284,13 +284,18 @@ void fillCrossword(struct Dictionary dict, int density, HWND parent, HINSTANCE h
 		exit(INVALID_PARAMETER_ERROR); // что-то пошло не так
 	int ndBeauty = 0;//переменная, хранящая минимальное количество пересечений
 
+	int k = (cw.height * cw.width) >> 1;
+
 	for (unsigned int i = 0; i < dict.size; i++) // для всех слов в словаре 
 	{
 		wchar_t* word = dict.words[i];
 		int x, y;
 		enum Orientation dir;
 
-		if (((density == DENSITY_LOW) && (dict.size > 20 && i >= (dict.size >> 1))) || ((density == DENSITY_HIGH || density == DENSITY_MEDIUM) && (i< (dict.size >> 2)))) ndBeauty = 1;
+		if (density == DENSITY_LOW && (i > k)) continue;
+
+		if (((density == DENSITY_LOW) && (dict.size > 20 && i >= (dict.size >> 1))) ||
+			((density == DENSITY_HIGH || density == DENSITY_MEDIUM) && (i < (dict.size >> 2)))) ndBeauty = 1;
 		int beauty = selector(word, &x, &y, &dir, ndBeauty); // выбираем позицию
 
 		if (density != DENSITY_LOW || ndBeauty !=0) {
@@ -305,7 +310,6 @@ void fillCrossword(struct Dictionary dict, int density, HWND parent, HINSTANCE h
 		progressBarNextStep(); // слово установилось, двигаем полосу загрузки
 		putWord(word, x, y, dir); // устанавливаем слово в кроссворд
 	}
-	ndBeauty = 0;
 
 	for (int i = 0; i < skippedCnt; i++) // а теперь перебираем все пропущенные слова и устанавливаем их 
 	{
